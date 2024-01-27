@@ -6,6 +6,7 @@ const {
   createProfileTableQuery,
   createBlogTableQuery,
   createBlogContentTableQuery,
+  updateQuery,
 } = require("../constants/queries");
 
 const executeQuery = async (query, values = []) => {
@@ -80,6 +81,15 @@ const blogContentTable = async () => {
   }
 };
 
+const updateForgotPassword = async () => {
+  const res = await executeQuery(updateQuery);
+  if (res.success) {
+    console.log("Reset token is updated");
+  } else {
+    throw Error(res.result);
+  }
+};
+
 module.exports = {
   executeQuery,
   testConnection,
@@ -88,4 +98,5 @@ module.exports = {
   createProfileTable,
   createBlogTable,
   blogContentTable,
+  updateForgotPassword,
 };
