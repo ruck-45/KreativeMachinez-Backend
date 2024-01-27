@@ -20,6 +20,20 @@ function issueJWT(userId, remember) {
   };
 }
 
+function issueResetJWT(userId) {
+  const payload = {
+    uid: userId,
+    iat: Date.now(),
+  };
+
+  const signedToken = jsonwebtoken.sign(payload, PRIV_KEY, { expiresIn: "10m", algorithm: "RS256" });
+
+  return {
+    token: signedToken,
+  };
+}
+
 module.exports = {
   issueJWT,
+  issueResetJWT,
 };

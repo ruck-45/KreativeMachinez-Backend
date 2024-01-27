@@ -1,9 +1,9 @@
-const fs = require('fs');
-const path = require('path');
+//Dependencies
+const nodemailer = require("nodemailer");
 
 // Local Files
 const { genHashPassword, validatePassword } = require("../utils/password");
-const { issueJWT } = require("../utils/jwt");
+const { issueJWT, issueResetJWT } = require("../utils/jwt");
 const { executeQuery } = require("../utils/database");
 const {
   insertUserDetailsQuery,
@@ -11,10 +11,21 @@ const {
   initializeUserProfile,
   getUserProfile,
   updateProfileInfo,
-  checkEmployeeQuery
+  checkEmployeeQuery,
+  updateQuery,
 } = require("../constants/queries");
 
 // ********************************** Util Functions ***********************************************
+
+// Nodemailer configuration
+const transporter = nodemailer.createTransport({
+  host: "smtp.ethereal.email",
+  port: 587,
+  auth: {
+    user: (SMPT_MAIL = "elda30@ethereal.email"),
+    pass: (SMPT_PASSWORD = "75WXsN3My6MZBKbK3w"),
+  },
+});
 
 const genUid = (counter) => {
   // Timestamp component (YYYYMMDDHHMMSS)
@@ -233,10 +244,52 @@ const updateProfileImage = async (req, res) => {
   return res.status(200).json({ success: true, payload: { message: "Profile Picture Updated Successfully" } });
 };
 
+const forgotPassword = async (req, res) => {
+  const { email } = req.body;
+
+  //Search in Database
+  const qreryRes = await executeQuery(findUserEmailQuery, [email]);
+  const userDetails = qreryRes.result[0];
+
+  // Return If Query Unsuccessful
+  if (userDetails.length === 0) {
+    return res.status(404).json({ success: false, payload: { message: "User Not Found" } });
+  }
+
+  // Extracting user Details
+  const userId = userDetails[0].user_id;
+
+  // Issue JWT
+  const jwt = issueResetJWT(userId);
+
+  //update the reset token in reset_token coloumn
+  const qreryResult = await executeQuery(updateQuery, [jwt, email]);
+
+  const resetPasswordURL = `${process.env.FRONTEND_URL}/forgot-password/${jwt}`;
+
+  //filling content
+  const mailOptions = {
+    from: SMPT_MAIL,
+    to: email,
+    subject: `you can reset your password ${resetPasswordURL}`,
+  };
+
+  //sending mail
+  transporter.sendMail(mailOptions, (emailErr) => {
+    if (emailErr) {
+      console.error("Email send error: ", emailErr);
+      res.status(500).send("Internal Server Error");
+    } else {
+      res.status(200).send("Password reset email sent");
+    }
+  });
+};
+
 module.exports = {
   createUser,
   loginUser,
   getProfile,
   updateProfile,
   updateProfileImage,
+  forgotPassword,
 };
