@@ -12,6 +12,7 @@ const {
   updateProfile,
   updateProfileImage,
   forgotPassword,
+  resetPassword,
 } = require("../controllers/usersController");
 const { updateRegisterCounter } = require("../middlewares/usersMiddlewares");
 
@@ -39,6 +40,6 @@ router.route("/login").post(loginUser);
 router.route("/profile").get(getProfile).put(updateProfile);
 router.route("/profile/images").put(storeProfilePic.single("image"), updateProfileImage);
 router.route("/forgot-password").post(forgotPassword);
-// router.route("/reset-password").post(resetPassword);
+router.route("/reset-password/:token").post(resetPassword);
 
 module.exports = router;

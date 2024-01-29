@@ -16,7 +16,10 @@ const insertUserDetailsQuery = `
   VALUES (?, ?, ?, ?, ?)
 `;
 
+const changePassword = `UPDATE users SET password_salt = ?,password_hash=? WHERE user_id = ?`;
+
 const findUserEmailQuery = `SELECT * FROM users WHERE email = ?`;
+const findUserToken = `SELECT * FROM users  where reset_token=? limit 1`;
 
 const findUserIdQuery = `SELECT * FROM users WHERE user_id = ?`;
 
@@ -95,7 +98,7 @@ const createBlogContentTableQuery = `
     );
   `;
 
-const updateQuery = "UPDATE users SET reset_token = ? WHERE email = ?";
+const updateQuery = `UPDATE users SET reset_token = ? WHERE email = ?`;
 
 module.exports = {
   checkDatabaseQuery,
@@ -117,4 +120,6 @@ module.exports = {
   getTotalBlogsQuery,
   initializeBlogContent,
   updateQuery,
+  changePassword,
+  findUserToken,
 };

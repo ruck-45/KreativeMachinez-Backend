@@ -33,7 +33,12 @@ function issueResetJWT(userId) {
   };
 }
 
+function verifyToken(token) {
+  return jwt.verify(token, PRIV_KEY);
+}
+
 module.exports = {
   issueJWT,
   issueResetJWT,
+  verifyToken,
 };

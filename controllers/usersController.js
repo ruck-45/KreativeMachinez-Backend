@@ -1,9 +1,6 @@
-//Dependencies
-const nodemailer = require("nodemailer");
-
 // Local Files
 const { genHashPassword, validatePassword } = require("../utils/password");
-const { issueJWT, issueResetJWT } = require("../utils/jwt");
+const { issueJWT, issueResetJWT, verifyToken } = require("../utils/jwt");
 const { executeQuery } = require("../utils/database");
 const {
   insertUserDetailsQuery,
@@ -13,19 +10,13 @@ const {
   updateProfileInfo,
   checkEmployeeQuery,
   updateQuery,
+  findUserToken,
+  changePassword,
 } = require("../constants/queries");
+const { config } = require("dotenv");
+const { sendEmail } = require("../utils/sendmail");
 
 // ********************************** Util Functions ***********************************************
-
-// Nodemailer configuration
-const transporter = nodemailer.createTransport({
-  host: "smtp.ethereal.email",
-  port: 587,
-  auth: {
-    user: (SMPT_MAIL = "elda30@ethereal.email"),
-    pass: (SMPT_PASSWORD = "75WXsN3My6MZBKbK3w"),
-  },
-});
 
 const genUid = (counter) => {
   // Timestamp component (YYYYMMDDHHMMSS)
@@ -243,29 +234,75 @@ const forgotPassword = async (req, res) => {
   const userId = userDetails[0].user_id;
 
   // Issue JWT
-  const jwt = issueResetJWT(userId);
+  const { token } = issueResetJWT(userId);
+  console.log(token);
 
   //update the reset token in reset_token coloumn
-  const qreryResult = await executeQuery(updateQuery, [jwt, email]);
+  const qreryResult = await executeQuery(updateQuery, [token, email]);
+  console.log(qreryResult);
+  if (!qreryResult.success) {
+    return res.status(404).json({ success: false, payload: { message: "not updated" } });
+  }
 
-  const resetPasswordURL = `${process.env.FRONTEND_URL}/forgot-password/${jwt}`;
+  const resetPasswordURL = `http://localhost:5000/api/users/reset-password/${token}`;
 
-  //filling content
-  const mailOptions = {
-    from: SMPT_MAIL,
-    to: email,
-    subject: `you can reset your password ${resetPasswordURL}`,
-  };
+  const subject = "reset password";
 
-  //sending mail
-  transporter.sendMail(mailOptions, (emailErr) => {
-    if (emailErr) {
-      console.error("Email send error: ", emailErr);
-      res.status(500).send("Internal Server Error");
-    } else {
-      res.status(200).send("Password reset email sent");
-    }
-  });
+  const message = `you can reset your password ${resetPasswordURL}`;
+
+  try {
+    await sendEmail(email, subject, message);
+
+    res.status(200).json({
+      success: true,
+      message: `reset password token sent to mail id ${email} succesfully`,
+    });
+  } catch (error) {
+    issueResetJWT = undefined;
+
+    res.status(400).json({
+      success: false,
+      message: error,
+    });
+  }
+};
+
+const resetPassword = async (req, res) => {
+  const { token } = req.params;
+  console.log("token:", token)
+
+  const { password } = req.body;
+
+  const qreryRes = await executeQuery(findUserToken, token);
+  console.log("hereis ",qreryRes)
+  if (!qreryRes.success) {
+    return res.status(404).json({ success: false, payload: { message: "invalid token" } });
+  }
+  const userDetails = qreryRes.result[0];
+
+  console.log(userDetails)
+
+  // Return If Query Unsuccessful
+  if (userDetails.length === 0) {
+    return res.status(404).json({ success: false, payload: { message: "User Not Found" } });
+  }
+
+  // Extracting user Details
+  const userId = userDetails[0].user_id;
+
+  // Hash Password generation
+  const { salt, hashPassword } = genHashPassword(password);
+
+  // update the Database
+  const details = [salt, hashPassword,userId];
+  const qreryResult = await executeQuery(changePassword, details); 
+
+  // Return If Creation Unsuccessful
+  if (!qreryResult.success) {
+    return res.status(501).json({ success: qreryResult.success, payload: qreryResult.result });
+  }
+
+  return res.status(201).json({ success: true, payload: { message: "password changed succesfully" } });
 };
 
 module.exports = {
@@ -275,4 +312,5 @@ module.exports = {
   updateProfile,
   updateProfileImage,
   forgotPassword,
+  resetPassword
 };
