@@ -16,10 +16,9 @@ const insertUserDetailsQuery = `
   VALUES (?, ?, ?, ?, ?)
 `;
 
-const changePassword = `UPDATE users SET password_salt = ?,password_hash=? WHERE user_id = ?`;
+const changePassword = `UPDATE users SET password_salt = ?,password_hash=? WHERE email = ?`;
 
 const findUserEmailQuery = `SELECT * FROM users WHERE email = ?`;
-const findUserToken = `SELECT * FROM users  where reset_token=? limit 1`;
 
 const findUserIdQuery = `SELECT * FROM users WHERE user_id = ?`;
 
@@ -121,5 +120,4 @@ module.exports = {
   initializeBlogContent,
   updateQuery,
   changePassword,
-  findUserToken,
 };

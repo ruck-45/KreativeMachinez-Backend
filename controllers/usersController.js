@@ -1,6 +1,6 @@
 // Local Files
 const { genHashPassword, validatePassword } = require("../utils/password");
-const { issueJWT, issueResetJWT, verifyToken } = require("../utils/jwt");
+const { issueJWT, verifyToken } = require("../utils/jwt");
 const { executeQuery } = require("../utils/database");
 const {
   insertUserDetailsQuery,
@@ -219,47 +219,49 @@ const updateProfileImage = async (req, res) => {
 };
 
 const forgotPassword = async (req, res) => {
-  const { email } = req.body;
-
-  //Search in Database
-  const qreryRes = await executeQuery(findUserEmailQuery, [email]);
-  const userDetails = qreryRes.result[0];
-
-  // Return If Query Unsuccessful
-  if (userDetails.length === 0) {
-    return res.status(404).json({ success: false, payload: { message: "User Not Found" } });
-  }
-
-  // Extracting user Details
-  const userId = userDetails[0].user_id;
-
-  // Issue JWT
-  const { token } = issueResetJWT(userId);
-  console.log(token);
-
-  //update the reset token in reset_token coloumn
-  const qreryResult = await executeQuery(updateQuery, [token, email]);
-  console.log(qreryResult);
-  if (!qreryResult.success) {
-    return res.status(404).json({ success: false, payload: { message: "not updated" } });
-  }
-
-  const resetPasswordURL = `http://localhost:5000/api/users/reset-password/${token}`;
-
-  const subject = "reset password";
-
-  const message = `you can reset your password ${resetPasswordURL}`;
-
   try {
-    await sendEmail(email, subject, message);
+    const { email } = req.body;
 
-    res.status(200).json({
-      success: true,
-      message: `reset password token sent to mail id ${email} succesfully`,
-    });
+    const qreryRes = await executeQuery(findUserEmailQuery, [email]);
+    if (!qreryRes.success) {
+      return res.status(404).json({ success: false, payload: { message: "User Not Found" } });
+    }
+
+    const userDetails = qreryRes.result[0];
+    if (userDetails.length === 0) {
+      return res.status(404).json({ success: false, payload: { message: "User Not Found" } });
+    }
+
+    const userId = userDetails[0].user_id;
+
+    const { token } = issueJWT(userId, "10m");
+
+    // const qreryResult = await executeQuery(updateQuery, [token, email]);
+    // if (!qreryResult.success) {
+    //   return res.status(404).json({ success: false, payload: { message: "not updated" } });
+    // }
+
+    const resetPasswordURL = `http://localhost:5000/api/users/reset-password/${token}`;
+
+    const linkText = "Click here";
+    const linkElement = `<a href="${resetPasswordURL}">${linkText}</a>`;
+
+    // const resetPasswordURL = `http://localhost:5000/api/users/reset-password/${token}`;
+    const subject = "reset password";
+    const message = `you can reset your password ${linkElement}`;
+    try {
+      await sendEmail(email, subject, message);
+      res.status(200).json({
+        success: true,
+        message: `reset password token sent to mail id ${email} succesfully`,
+      });
+    } catch (error) {
+      res.status(500).json({
+        success: false,
+        message: `Failed to send email`,
+      });
+    }
   } catch (error) {
-    issueResetJWT = undefined;
-
     res.status(400).json({
       success: false,
       message: error,
@@ -268,36 +270,16 @@ const forgotPassword = async (req, res) => {
 };
 
 const resetPassword = async (req, res) => {
-  const { token } = req.params;
-  console.log("token:", token)
+  const userEmail = req.user.email;
 
   const { password } = req.body;
-
-  const qreryRes = await executeQuery(findUserToken, token);
-  console.log("hereis ",qreryRes)
-  if (!qreryRes.success) {
-    return res.status(404).json({ success: false, payload: { message: "invalid token" } });
-  }
-  const userDetails = qreryRes.result[0];
-
-  console.log(userDetails)
-
-  // Return If Query Unsuccessful
-  if (userDetails.length === 0) {
-    return res.status(404).json({ success: false, payload: { message: "User Not Found" } });
-  }
-
-  // Extracting user Details
-  const userId = userDetails[0].user_id;
 
   // Hash Password generation
   const { salt, hashPassword } = genHashPassword(password);
 
   // update the Database
-  const details = [salt, hashPassword,userId];
+  const details = [salt, hashPassword,userEmail];
   const qreryResult = await executeQuery(changePassword, details); 
-
-  // Return If Creation Unsuccessful
   if (!qreryResult.success) {
     return res.status(501).json({ success: qreryResult.success, payload: qreryResult.result });
   }
