@@ -1,15 +1,15 @@
 import nodemailer from "nodemailer"
 
-const sendEmail = async function (email, subject, message) {
+const sendEmail = async (email, subject, message) => {
     // create reusable transporter object using defualt SMTP transport
 
-    let transporter = nodemailer.createTransport({
+    const transporter = nodemailer.createTransport({
         host: 'smtp.ethereal.email',
-    port: 587,
-    auth: {
-        user:SMPT_MAIL= 'elda30@ethereal.email',
-        pass:SMPT_PASSWORD= '75WXsN3My6MZBKbK3w'
-    }
+        port: 587,
+        auth: {
+            user:SMPT_MAIL= 'elda30@ethereal.email',
+            pass:SMPT_PASSWORD= '75WXsN3My6MZBKbK3w'
+        }
     });
 
     await transporter.sendEmail({
@@ -26,7 +26,7 @@ const sendEmail = async function (email, subject, message) {
     //      html: message,
     // }
 
-    await transporter.sendMail(mailInfo);
+    // await transporter.sendMail(mailInfo);
 }
 
 export default sendEmail;

@@ -95,7 +95,7 @@ const createBlogContentTableQuery = `
     );
   `;
 
-const updateQuery = "UPDATE users SET reset_token = ? WHERE email = ?";
+const updateResetTokenQuery = "UPDATE users SET reset_token = ? WHERE email = ?";
 
 module.exports = {
   checkDatabaseQuery,
@@ -116,5 +116,5 @@ module.exports = {
   createBlogContentTableQuery,
   getTotalBlogsQuery,
   initializeBlogContent,
-  updateQuery,
+  updateResetTokenQuery,
 };

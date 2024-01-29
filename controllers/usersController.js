@@ -12,7 +12,7 @@ const {
   getUserProfile,
   updateProfileInfo,
   checkEmployeeQuery,
-  updateQuery,
+  updateResetTokenQuery,
 } = require("../constants/queries");
 
 // ********************************** Util Functions ***********************************************
@@ -20,10 +20,9 @@ const {
 // Nodemailer configuration
 const transporter = nodemailer.createTransport({
   host: "smtp.ethereal.email",
-  port: 587,
   auth: {
-    user: (SMPT_MAIL = "elda30@ethereal.email"),
-    pass: (SMPT_PASSWORD = "75WXsN3My6MZBKbK3w"),
+    user:  "cordia.jakubowski38@ethereal.email",
+    pass:  "dp9BF17EUScR4pKja8",
   },
 });
 
@@ -246,41 +245,37 @@ const updateProfileImage = async (req, res) => {
 
 const forgotPassword = async (req, res) => {
   const { email } = req.body;
-
-  //Search in Database
   const qreryRes = await executeQuery(findUserEmailQuery, [email]);
   const userDetails = qreryRes.result[0];
 
-  // Return If Query Unsuccessful
   if (userDetails.length === 0) {
-    return res.status(404).json({ success: false, payload: { message: "User Not Found" } });
+    return res.status(404).json({ success: false, payload: { message: "You are not registered please sign up" } });
   }
 
-  // Extracting user Details
   const userId = userDetails[0].user_id;
-
-  // Issue JWT
   const jwt = issueResetJWT(userId);
-
-  //update the reset token in reset_token coloumn
-  const qreryResult = await executeQuery(updateQuery, [jwt, email]);
+  const qreryResult = await executeQuery(updateResetTokenQuery, [jwt.token, email]);
+  if (!qreryResult.success) {
+    return res.status(404).json({ success: false, payload: { message: "You are not registered please sign up" } });
+  }
 
   const resetPasswordURL = `${process.env.FRONTEND_URL}/forgot-password/${jwt}`;
 
-  //filling content
   const mailOptions = {
-    from: SMPT_MAIL,
+    from: "cordia.jakubowski38@ethereal.email",
     to: email,
     subject: `you can reset your password ${resetPasswordURL}`,
   };
 
-  //sending mail
   transporter.sendMail(mailOptions, (emailErr) => {
-    if (emailErr) {
-      console.error("Email send error: ", emailErr);
-      res.status(500).send("Internal Server Error");
-    } else {
-      res.status(200).send("Password reset email sent");
+    try {
+      if (emailErr) {
+        console.error("Email send error: ", emailErr);
+        return res.status(500).send("Internal Server Error");
+      }
+      return res.status(201).json({ success: true, payload: { message: "Email Sent Successfully" } });
+    } catch (error) {
+      console.log(error)
     }
   });
 };
