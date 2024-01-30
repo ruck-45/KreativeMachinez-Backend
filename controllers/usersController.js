@@ -1,6 +1,6 @@
 // Local Files
 const { genHashPassword, validatePassword } = require("../utils/password");
-const { issueJWT, verifyToken } = require("../utils/jwt");
+const { issueJWT } = require("../utils/jwt");
 const { executeQuery } = require("../utils/database");
 const {
   insertUserDetailsQuery,
@@ -9,11 +9,9 @@ const {
   getUserProfile,
   updateProfileInfo,
   checkEmployeeQuery,
-  updateQuery,
-  findUserToken,
   changePassword,
 } = require("../constants/queries");
-const { config } = require("dotenv");
+
 const { sendEmail } = require("../utils/sendmail");
 
 // ********************************** Util Functions ***********************************************
@@ -138,7 +136,7 @@ const loginUser = async (req, res) => {
   }
 
   // Issue JWT
-  const jwt = issueJWT(userId, remember);
+ const jwt = issueJWT(userId, remember ? 7 : 2, "d");
 
   // Check If User is a registered hms employee
   let isEmployee = false;
@@ -220,7 +218,10 @@ const updateProfileImage = async (req, res) => {
 
 const forgotPassword = async (req, res) => {
   try {
-    const { email } = req.body;
+    if (!req.body || !req.body.email) {
+      return res.status(400).json({ success: false, message: "Invalid email format" });
+    }
+    const { email } = req.body; 
 
     const qreryRes = await executeQuery(findUserEmailQuery, [email]);
     if (!qreryRes.success) {
@@ -228,27 +229,15 @@ const forgotPassword = async (req, res) => {
     }
 
     const userDetails = qreryRes.result[0];
-    if (userDetails.length === 0) {
-      return res.status(404).json({ success: false, payload: { message: "User Not Found" } });
-    }
-
     const userId = userDetails[0].user_id;
 
-    const { token } = issueJWT(userId, "10m");
-
-    // const qreryResult = await executeQuery(updateQuery, [token, email]);
-    // if (!qreryResult.success) {
-    //   return res.status(404).json({ success: false, payload: { message: "not updated" } });
-    // }
-
-    const resetPasswordURL = `http://localhost:5000/api/users/reset-password/${token}`;
-
+    const { token } = issueJWT(userId, 10, "m");
+    const resetPasswordURL = `http://localhost:3000/ResetPassword?token=${token}`;
     const linkText = "Click here";
     const linkElement = `<a href="${resetPasswordURL}">${linkText}</a>`;
-
-    // const resetPasswordURL = `http://localhost:5000/api/users/reset-password/${token}`;
     const subject = "reset password";
     const message = `you can reset your password ${linkElement}`;
+
     try {
       await sendEmail(email, subject, message);
       res.status(200).json({
@@ -270,22 +259,28 @@ const forgotPassword = async (req, res) => {
 };
 
 const resetPassword = async (req, res) => {
-  const userEmail = req.user.email;
-
+  const userId = req.user.user_id;
+  if (!req.body || !req.body.password) {
+    return res.status(400).json({ success: false, message: "Password is required." });
+  }
   const { password } = req.body;
 
-  // Hash Password generation
-  const { salt, hashPassword } = genHashPassword(password);
+  try {
+    const { salt, hashPassword } = genHashPassword(password);
 
-  // update the Database
-  const details = [salt, hashPassword,userEmail];
-  const qreryResult = await executeQuery(changePassword, details); 
-  if (!qreryResult.success) {
-    return res.status(501).json({ success: qreryResult.success, payload: qreryResult.result });
+    const details = [salt, hashPassword, userId];
+    const queryResult = await executeQuery(changePassword, details);
+
+    if (!queryResult.success) {
+      return res.status(501).json({ success: false, payload: queryResult.result });
+    }
+
+    return res.status(201).json({ success: true, payload: { message: "Password changed successfully." } });
+  } catch (error) {
+    return res.status(500).json({ success: false, message: "Internal server error." });
   }
-
-  return res.status(201).json({ success: true, payload: { message: "password changed succesfully" } });
 };
+
 
 module.exports = {
   createUser,

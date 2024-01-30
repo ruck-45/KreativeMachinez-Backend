@@ -16,7 +16,7 @@ const insertUserDetailsQuery = `
   VALUES (?, ?, ?, ?, ?)
 `;
 
-const changePassword = `UPDATE users SET password_salt = ?,password_hash=? WHERE email = ?`;
+const changePassword = `UPDATE users SET password_salt = ?,password_hash=? WHERE user_id = ?`;
 
 const findUserEmailQuery = `SELECT * FROM users WHERE email = ?`;
 
