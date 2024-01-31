@@ -136,7 +136,7 @@ const loginUser = async (req, res) => {
   }
 
   // Issue JWT
- const jwt = issueJWT(userId, remember ? 7 : 2, "d");
+ const jwt = issueJWT(userId, remember ? 7 : 1, "d");
 
   // Check If User is a registered hms employee
   let isEmployee = false;
@@ -216,44 +216,38 @@ const updateProfileImage = async (req, res) => {
   return res.status(200).json({ success: true, payload: { message: "Profile Picture Updated Successfully" } });
 };
 
+
 const forgotPassword = async (req, res) => {
   try {
     if (!req.body || !req.body.email) {
-      return res.status(400).json({ success: false, message: "Invalid email format" });
+      return res.status(400).json({ success: false, payload: { message: "Invalid email format" } });
     }
     const { email } = req.body; 
 
     const qreryRes = await executeQuery(findUserEmailQuery, [email]);
-    if (!qreryRes.success) {
+    const userDetails = qreryRes.result[0];
+    if (userDetails.length === 0) {
       return res.status(404).json({ success: false, payload: { message: "User Not Found" } });
     }
 
-    const userDetails = qreryRes.result[0];
     const userId = userDetails[0].user_id;
 
     const { token } = issueJWT(userId, 10, "m");
-    const resetPasswordURL = `http://localhost:3000/ResetPassword?token=${token}`;
+    const resetPasswordURL = `https://hmsfreedom.com/ResetPassword?state=reset&&token=${token}`;
     const linkText = "Click here";
     const linkElement = `<a href="${resetPasswordURL}">${linkText}</a>`;
     const subject = "reset password";
     const message = `you can reset your password ${linkElement}`;
-
-    try {
-      await sendEmail(email, subject, message);
-      res.status(200).json({
-        success: true,
-        message: `reset password token sent to mail id ${email} succesfully`,
-      });
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: `Failed to send email`,
-      });
-    }
+    console.log("send email");
+    await sendEmail(email, subject, message);
+    res.status(200).json({
+      success: true,
+      payload: { message: `reset password token sent to mail id ${email} succesfully` },
+    });
   } catch (error) {
     res.status(400).json({
       success: false,
-      message: error,
+      payload: { message: error },
     });
   }
 };
@@ -261,24 +255,20 @@ const forgotPassword = async (req, res) => {
 const resetPassword = async (req, res) => {
   const userId = req.user.user_id;
   if (!req.body || !req.body.password) {
-    return res.status(400).json({ success: false, message: "Password is required." });
+    return res.status(400).json({ success: false, payload: { message: "Password is required." } });
   }
   const { password } = req.body;
 
-  try {
-    const { salt, hashPassword } = genHashPassword(password);
+  const { salt, hashPassword } = genHashPassword(password);
 
-    const details = [salt, hashPassword, userId];
-    const queryResult = await executeQuery(changePassword, details);
+  const details = [salt, hashPassword, userId];
+  const queryResult = await executeQuery(changePassword, details);
 
-    if (!queryResult.success) {
-      return res.status(501).json({ success: false, payload: queryResult.result });
-    }
-
-    return res.status(201).json({ success: true, payload: { message: "Password changed successfully." } });
-  } catch (error) {
-    return res.status(500).json({ success: false, message: "Internal server error." });
+  if (!queryResult.success) {
+    return res.status(501).json({ success: false, payload: queryResult.result });
   }
+
+  return res.status(201).json({ success: true, payload: { message: "Password changed successfully." } });
 };
 
 

@@ -81,14 +81,6 @@ const blogContentTable = async () => {
   }
 };
 
-const updateForgotPassword = async () => {
-  const res = await executeQuery(updateQuery);
-  if (res.success) {
-    console.log("Reset token is updated");
-  } else {
-    throw Error(res.result);
-  }
-};
 
 module.exports = {
   executeQuery,
@@ -98,5 +90,4 @@ module.exports = {
   createProfileTable,
   createBlogTable,
   blogContentTable,
-  updateForgotPassword,
 };

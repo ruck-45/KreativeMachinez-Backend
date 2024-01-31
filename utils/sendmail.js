@@ -9,8 +9,8 @@ const sendEmail = async function (email, subject, message) {
     port: 465,
     secure: true,
     auth: {
-      user: (SMPT_MAIL = "anishmishra12121993@gmail.com"),
-      pass: (SMPT_PASSWORD = "sapz cpbo lnrw zxsi"),
+      user: (SMPT_MAIL = process.env.SMPT_MAIL),
+      pass: (SMPT_PASSWORD = process.env.SMPT_PASSWORD),
     },
   });
 
