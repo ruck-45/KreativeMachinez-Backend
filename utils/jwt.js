@@ -22,7 +22,7 @@ function issueJWT(userId, duration, unit) {
 
   return {
     token: signedToken,
-    expires: expiresIn,
+    expires: duration,
   };
 }
 

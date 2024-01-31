@@ -219,10 +219,10 @@ const updateProfileImage = async (req, res) => {
 
 const forgotPassword = async (req, res) => {
   try {
-    if (!req.body || !req.body.email) {
-      return res.status(400).json({ success: false, payload: { message: "Invalid email format" } });
-    }
     const { email } = req.body; 
+    if (email === undefined) {
+      return res.status(206).json({ success: false, payload: { message: "Partial Content Provided" } });
+    }
 
     const qreryRes = await executeQuery(findUserEmailQuery, [email]);
     const userDetails = qreryRes.result[0];
@@ -236,9 +236,8 @@ const forgotPassword = async (req, res) => {
     const resetPasswordURL = `https://hmsfreedom.com/ResetPassword?state=reset&&token=${token}`;
     const linkText = "Click here";
     const linkElement = `<a href="${resetPasswordURL}">${linkText}</a>`;
-    const subject = "reset password";
-    const message = `you can reset your password ${linkElement}`;
-    console.log("send email");
+    const subject = "Kreative Machinez reset password";
+    const message = `you can reset your password here :  ${linkElement}`;
     await sendEmail(email, subject, message);
     res.status(200).json({
       success: true,
@@ -254,11 +253,10 @@ const forgotPassword = async (req, res) => {
 
 const resetPassword = async (req, res) => {
   const userId = req.user.user_id;
-  if (!req.body || !req.body.password) {
-    return res.status(400).json({ success: false, payload: { message: "Password is required." } });
-  }
   const { password } = req.body;
-
+   if (password === undefined) {
+     return res.status(206).json({ success: false, payload: { message: "Partial Content Provided" } });
+   }
   const { salt, hashPassword } = genHashPassword(password);
 
   const details = [salt, hashPassword, userId];
