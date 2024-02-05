@@ -1,3 +1,6 @@
+const fs = require('fs');
+const path = require('path');
+
 // Local Files
 const { genHashPassword, validatePassword } = require("../utils/password");
 const { issueJWT, verifyToken } = require("../utils/jwt");
@@ -9,11 +12,9 @@ const {
   getUserProfile,
   updateProfileInfo,
   checkEmployeeQuery,
-  updateQuery,
-  findUserToken,
   changePassword,
 } = require("../constants/queries");
-const { config } = require("dotenv");
+
 const { sendEmail } = require("../utils/sendmail");
 
 // ********************************** Util Functions ***********************************************
@@ -77,15 +78,32 @@ const createUser = async (req, res) => {
   // Initialize Profile Database
   const imageId = genUid(registerCounter);
   const qreryRes2 = await executeQuery(initializeUserProfile, [userId, imageId]);
-  const profileInitMessage = qreryRes2.success
-    ? {
-        profileInitializationSuccess: qreryRes2.success,
-        profilePayload: { profileMessage: "Profile Initialization Successful." },
-      }
-    : {
-        profileInitializationSuccess: qreryRes2.success,
-        profilePayload: qreryRes2.result,
-      };
+  let profileInitMessage = {}
+ if (qreryRes2.success) {
+   // Profile Initialization Successful
+   const defaultImageFilename = "default.jpg";
+   const userImageFilename = `${imageId}.jpg`;
+
+   const defaultImagePath = path.join(__dirname, "../public", "userImages", defaultImageFilename);
+   const userImagePath = path.join(__dirname, "../public", "userImages", userImageFilename);
+
+   // Read the contents of the default image file
+   const defaultImageBuffer = fs.readFileSync(defaultImagePath);
+
+   // Write the contents to the user's folder with the user-specific filename
+   fs.writeFileSync(userImagePath, defaultImageBuffer);
+
+   profileInitMessage = {
+     profileInitializationSuccess: true,
+     profilePayload: { profileMessage: "Profile Initialization Successful." },
+   };
+ } else {
+   // Profile Initialization Failed
+   profileInitMessage = {
+     profileInitializationSuccess: false,
+     profilePayload: qreryRes2.result,
+   };
+ }
 
   return res
     .status(201)
@@ -138,7 +156,7 @@ const loginUser = async (req, res) => {
   }
 
   // Issue JWT
-  const jwt = issueJWT(userId, remember);
+ const jwt = issueJWT(userId, remember ? 7 : 1, "d");
 
   // Check If User is a registered hms employee
   let isEmployee = false;
@@ -218,15 +236,15 @@ const updateProfileImage = async (req, res) => {
   return res.status(200).json({ success: true, payload: { message: "Profile Picture Updated Successfully" } });
 };
 
+
 const forgotPassword = async (req, res) => {
   try {
-    const { email } = req.body;
-
-    const qreryRes = await executeQuery(findUserEmailQuery, [email]);
-    if (!qreryRes.success) {
-      return res.status(404).json({ success: false, payload: { message: "User Not Found" } });
+    const { email } = req.body; 
+    if (email === undefined) {
+      return res.status(206).json({ success: false, payload: { message: "Partial Content Provided" } });
     }
 
+    const qreryRes = await executeQuery(findUserEmailQuery, [email]);
     const userDetails = qreryRes.result[0];
     if (userDetails.length === 0) {
       return res.status(404).json({ success: false, payload: { message: "User Not Found" } });
@@ -234,58 +252,43 @@ const forgotPassword = async (req, res) => {
 
     const userId = userDetails[0].user_id;
 
-    const { token } = issueJWT(userId, "10m");
-
-    // const qreryResult = await executeQuery(updateQuery, [token, email]);
-    // if (!qreryResult.success) {
-    //   return res.status(404).json({ success: false, payload: { message: "not updated" } });
-    // }
-
-    const resetPasswordURL = `http://localhost:5000/api/users/reset-password/${token}`;
-
+    const { token } = issueJWT(userId, 10, "m");
+    const resetPasswordURL = `https://hmsfreedom.com/ResetPassword?state=reset&&token=${token}`;
     const linkText = "Click here";
     const linkElement = `<a href="${resetPasswordURL}">${linkText}</a>`;
-
-    // const resetPasswordURL = `http://localhost:5000/api/users/reset-password/${token}`;
-    const subject = "reset password";
-    const message = `you can reset your password ${linkElement}`;
-    try {
-      await sendEmail(email, subject, message);
-      res.status(200).json({
-        success: true,
-        message: `reset password token sent to mail id ${email} succesfully`,
-      });
-    } catch (error) {
-      res.status(500).json({
-        success: false,
-        message: `Failed to send email`,
-      });
-    }
+    const subject = "Kreative Machinez reset password";
+    const message = `you can reset your password here :  ${linkElement}`;
+    await sendEmail(email, subject, message);
+    res.status(200).json({
+      success: true,
+      payload: { message: `reset password token sent to mail id ${email} succesfully` },
+    });
   } catch (error) {
     res.status(400).json({
       success: false,
-      message: error,
+      payload: { message: error },
     });
   }
 };
 
 const resetPassword = async (req, res) => {
-  const userEmail = req.user.email;
-
+  const userId = req.user.user_id;
   const { password } = req.body;
-
-  // Hash Password generation
+   if (password === undefined) {
+     return res.status(206).json({ success: false, payload: { message: "Partial Content Provided" } });
+   }
   const { salt, hashPassword } = genHashPassword(password);
 
-  // update the Database
-  const details = [salt, hashPassword,userEmail];
-  const qreryResult = await executeQuery(changePassword, details); 
-  if (!qreryResult.success) {
-    return res.status(501).json({ success: qreryResult.success, payload: qreryResult.result });
+  const details = [salt, hashPassword, userId];
+  const queryResult = await executeQuery(changePassword, details);
+
+  if (!queryResult.success) {
+    return res.status(501).json({ success: false, payload: queryResult.result });
   }
 
-  return res.status(201).json({ success: true, payload: { message: "password changed succesfully" } });
+  return res.status(201).json({ success: true, payload: { message: "Password changed successfully." } });
 };
+
 
 module.exports = {
   createUser,
