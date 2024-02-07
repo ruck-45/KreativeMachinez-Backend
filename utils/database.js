@@ -90,5 +90,5 @@ module.exports = {
   createProfileTable,
   createBlogTable,
   blogContentTable,
-  updateForgotPassword,
+ 
 };

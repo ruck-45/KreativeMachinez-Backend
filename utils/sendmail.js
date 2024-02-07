@@ -1,6 +1,6 @@
 const nodemailer = require("nodemailer");
 
-const sendEmail = async function (email, subject, message) {
+const sendEmail = async function ( email, subject, message) {
   // create reusable transporter object using defualt SMTP transport
 
   let transporter = nodemailer.createTransport({
@@ -13,6 +13,8 @@ const sendEmail = async function (email, subject, message) {
       pass: (SMPT_PASSWORD = process.env.SMPT_PASSWORD),
     },
   });
+
+ 
 
   const mailInfo = {
     from: SMPT_MAIL,
