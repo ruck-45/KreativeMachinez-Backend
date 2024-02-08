@@ -7,7 +7,7 @@ const passport = require("passport");
 // Local Files
 const users = require("./routes/users");
 const blogs = require("./routes/blogs");
-const contact = require("./routes/miscellenous")
+const contact = require("./routes/contact");
 const {
   testConnection,
   createUsersTable,
@@ -18,7 +18,7 @@ const {
 } = require("./utils/database");
 require("./config/passportConfig")(passport);
 
-const port = process.env.PORT ;
+const port = process.env.PORT;
 const app = express();
 
 // Essential Middlewares
@@ -30,7 +30,7 @@ app.use(cors());
 // Routes
 app.use("/api/users", users);
 app.use("/api/blogs", blogs);
-app.use("/api/contact" ,contact);
+app.use("/api/contact", contact);
 
 // Database Connection and Configuration
 testConnection();
