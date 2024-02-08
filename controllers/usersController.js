@@ -3,7 +3,7 @@ const path = require('path');
 
 // Local Files
 const { genHashPassword, validatePassword } = require("../utils/password");
-const { issueJWT, verifyToken } = require("../utils/jwt");
+const { issueJWT } = require("../utils/jwt");
 const { executeQuery } = require("../utils/database");
 const {
   insertUserDetailsQuery,
