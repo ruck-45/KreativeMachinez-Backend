@@ -1,9 +1,7 @@
 const nodemailer = require("nodemailer");
 
-const sendEmail = async function ( email, subject, message) {
-  // create reusable transporter object using defualt SMTP transport
-
-  let transporter = nodemailer.createTransport({
+const sendEmail = async (email, subject, message) => {
+  const transporter = nodemailer.createTransport({
     service: "Gmail",
     host: "smtp.gmail.email",
     port: 465,
@@ -13,8 +11,6 @@ const sendEmail = async function ( email, subject, message) {
       pass: (SMPT_PASSWORD = process.env.SMPT_PASSWORD),
     },
   });
-
- 
 
   const mailInfo = {
     from: SMPT_MAIL,
