@@ -22,6 +22,20 @@ const sendEmail = async (email, subject, message) => {
   await transporter.sendMail(mailInfo);
 };
 
+// Email template
+const emailTemplate = (clientEmail, clientMessage, clientSubject) => `
+    <html>
+    <body>
+      <p>Hello KreativeMachine Team,<p>
+      <p> You have a message from: email : ${clientEmail}</p>
+      <p>Subject: ${clientSubject}</p>
+      <p>Message: ${clientMessage}</p>
+      <p>Regards,<br>Kreative Machine</p>
+    </body>
+    </html>
+`;
+
 module.exports = {
   sendEmail,
+  emailTemplate,
 };
